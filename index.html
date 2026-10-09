@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>J.A.R.V.I.S. — Prototype</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body data-state="idle" data-view="home">
+  <!-- Fond : grille technique, particules (canvas) et balayage lumineux -->
+  <div class="bg-grid" aria-hidden="true"></div>
+  <canvas id="particles" aria-hidden="true"></canvas>
+  <div class="bg-scan" aria-hidden="true"></div>
+
+  <div class="layout">
+    <!-- ================= EN-TÊTE ================= -->
+    <header class="topbar panel">
+      <div class="logo">J.A.R.V.I.S.<small>Just A Rather Very Intelligent System — prototype</small></div>
+      <div class="status">
+        <span class="pulse" aria-hidden="true"></span>
+        <span>SYSTÈME : <strong class="ok">EN LIGNE</strong></span>
+      </div>
+      <div class="clock">
+        <div id="clock-time" class="clock-time">--:--:--</div>
+        <div id="clock-date" class="clock-date">—</div>
+      </div>
+    </header>
+
+    <!-- ================= COLONNE GAUCHE ================= -->
+    <aside class="left">
+      <nav class="panel" aria-label="Navigation">
+        <h2>Navigation</h2>
+        <button class="nav-btn active" data-view="home">ACCUEIL</button>
+        <button class="nav-btn" data-view="assistant">ASSISTANT</button>
+        <button class="nav-btn" data-view="design3d">CONCEPTION 3D</button>
+        <button class="nav-btn" data-view="agenda">AGENDA</button>
+        <button class="nav-btn" data-view="tasks">TÂCHES <span id="nav-task-badge" class="badge" hidden>0</span></button>
+        <button class="nav-btn" data-view="reminders">RAPPELS <span id="nav-reminder-badge" class="badge" hidden>0</span></button>
+        <button class="nav-btn" data-view="messages">MESSAGES</button>
+        <button class="nav-btn" data-view="settings">RÉGLAGES</button>
+      </nav>
+
+      <section class="panel">
+        <h2>Dernières commandes</h2>
+        <ul id="recent-commands" class="list compact"></ul>
+      </section>
+
+      <section class="panel">
+        <h2>Modules actifs</h2>
+        <ul class="modules">
+          <li><span class="dot on"></span>Moteur de commandes locales</li>
+          <li><span class="dot on"></span>Conception 3D</li>
+          <li><span class="dot on"></span>Agenda</li>
+          <li><span class="dot on"></span>Tâches</li>
+          <li><span class="dot on"></span>Rappels</li>
+          <li><span class="dot on"></span>Messages (brouillon)</li>
+          <li><span class="dot on"></span>Recherche web (nouvel onglet)</li>
+          <li><span class="dot" id="mod-voice-dot"></span><span id="mod-voice-label">Reconnaissance vocale</span></li>
+          <li><span class="dot" id="mod-storage-dot"></span><span id="mod-storage-label">Stockage local</span></li>
+          <li><span class="dot off" id="mod-ai-dot"></span><span id="mod-ai-label">IA distante (non configurée)</span></li>
+        </ul>
+      </section>
+    </aside>
+
+    <!-- ================= CENTRE ================= -->
+    <main class="stage">
+      <div class="core" id="core">
+        <div class="ring r-dash"></div>
+        <div class="ring r-arc"></div>
+        <div class="ring r-ticks"></div>
+        <div class="ring r-arc2"></div>
+        <div class="ring r-sweep"></div>
+        <div class="core-glow"></div>
+        <div class="wave" id="wave" aria-hidden="true"></div>
+        <button id="listen-btn" class="core-btn" type="button" aria-pressed="false" title="Dicter une commande (reconnaissance vocale)">
+          <span id="listen-icon">◉</span>
+        </button>
+        <div class="core-label" id="core-label">VEILLE</div>
+      </div>
+      <p class="stage-note" id="stage-note">Cliquez sur le bouton central pour dicter une commande.</p>
+
+      <!-- Panneaux de modules (superposés au noyau) -->
+      <div class="views">
+        <!-- ASSISTANT -->
+        <section class="view panel" id="view-assistant" data-view="assistant" hidden>
+          <h2>Assistant</h2>
+          <p class="hint" id="engine-hint">Moteur conversationnel : <strong>commandes locales prédéfinies</strong>. L'IA est optionnelle (voir RÉGLAGES).</p>
+          <h3>Commandes comprises</h3>
+          <ul class="cmd-list">
+            <li><code>Bonjour JARVIS</code></li>
+            <li><code>Quelle heure est-il ?</code> / <code>Quelle est la date ?</code></li>
+            <li><code>Affiche mon agenda</code></li>
+            <li><code>Ajoute un événement : réunion demain à 14h30</code></li>
+            <li><code>Ajoute une tâche : préparer la présentation</code></li>
+            <li><code>Quelles sont mes tâches ?</code></li>
+            <li><code>Rappelle-moi dans 10 minutes d'appeler Paul</code> / <code>Quels sont mes rappels ?</code></li>
+            <li><code>Rédige un mail à nom@exemple.fr sur la réunion de demain</code></li>
+            <li><code>Recherche sur le web : météo Paris</code></li>
+            <li><code>Demande à l'IA : …</code> (si l'IA est activée)</li>
+            <li><code>Ouvre mes messages</code> / <code>Ouvre l'agenda</code> / <code>Ouvre les tâches</code></li>
+            <li><code>Efface l'historique</code></li>
+            <li><code>Aide</code></li>
+          </ul>
+          <button id="clear-history" class="btn ghost" type="button">Effacer l'historique de conversation</button>
+        </section>
+
+        <!-- CONCEPTION 3D -->
+        <section class="view panel" id="view-design3d" data-view="design3d" hidden>
+          <h2>Conception 3D</h2>
+          <p class="hint">Choisissez une forme et ses dimensions. Faites glisser la souris sur l'aperçu pour la faire pivoter.</p>
+          <div class="design3d-preview">
+            <canvas id="design3d-canvas" role="img" aria-label="Aperçu 3D de la forme sélectionnée"></canvas>
+          </div>
+          <div class="design3d-controls">
+            <label>Forme
+              <select id="design3d-shape">
+                <option value="cube">Cube</option>
+                <option value="sphere">Sphère</option>
+                <option value="cylinder">Cylindre</option>
+              </select>
+            </label>
+            <label>Largeur <output id="design3d-width-value">1,5</output>
+              <input id="design3d-width" type="range" min="0.5" max="3" step="0.1" value="1.5">
+            </label>
+            <label>Hauteur <output id="design3d-height-value">1,5</output>
+              <input id="design3d-height" type="range" min="0.5" max="3" step="0.1" value="1.5">
+            </label>
+            <label>Profondeur <output id="design3d-depth-value">1,5</output>
+              <input id="design3d-depth" type="range" min="0.5" max="3" step="0.1" value="1.5">
+            </label>
+          </div>
+          <button id="design3d-reset" class="btn ghost small" type="button">RÉINITIALISER LA VUE</button>
+        </section>
+
+        <!-- AGENDA -->
+        <section class="view panel" id="view-agenda" data-view="agenda" hidden>
+          <h2>Agenda</h2>
+          <div class="agenda-grid">
+            <div class="calendar">
+              <div class="cal-head">
+                <button id="cal-prev" class="btn icon" type="button" aria-label="Mois précédent">‹</button>
+                <strong id="cal-title">—</strong>
+                <button id="cal-next" class="btn icon" type="button" aria-label="Mois suivant">›</button>
+              </div>
+              <div class="cal-week" aria-hidden="true"><span>L</span><span>M</span><span>M</span><span>J</span><span>V</span><span>S</span><span>D</span></div>
+              <div id="cal-days" class="cal-days"></div>
+              <button id="cal-today" class="btn ghost small" type="button">Aujourd'hui</button>
+            </div>
+            <div class="agenda-side">
+              <form id="event-form" novalidate>
+                <h3>Nouvel événement</h3>
+                <label>Titre <input id="event-title" type="text" maxlength="100" required placeholder="Ex. Réunion d'équipe"></label>
+                <div class="row">
+                  <label>Date <input id="event-date" type="date" required></label>
+                  <label>Heure <input id="event-time" type="time" required value="09:00"></label>
+                </div>
+                <button class="btn" type="submit">AJOUTER</button>
+                <p id="event-msg" class="form-msg" role="status"></p>
+              </form>
+              <h3 id="day-title">Événements du jour</h3>
+              <ul id="day-events" class="list"></ul>
+            </div>
+          </div>
+        </section>
+
+        <!-- TÂCHES -->
+        <section class="view panel" id="view-tasks" data-view="tasks" hidden>
+          <h2>Tâches</h2>
+          <form id="task-form" class="row inline" novalidate>
+            <input id="task-input" type="text" maxlength="200" placeholder="Nouvelle tâche…" aria-label="Nouvelle tâche">
+            <button class="btn" type="submit">AJOUTER</button>
+          </form>
+          <p id="task-msg" class="form-msg" role="status"></p>
+          <p id="task-count" class="counter">0 tâche restante</p>
+          <ul id="task-list" class="list tasks"></ul>
+          <div id="task-empty" class="empty" hidden>
+            <div class="empty-icon" aria-hidden="true">◌</div>
+            <p>Aucune tâche enregistrée.<br>Tout est calme, Monsieur.</p>
+          </div>
+        </section>
+
+        <!-- RAPPELS -->
+        <section class="view panel" id="view-reminders" data-view="reminders" hidden>
+          <h2>Rappels</h2>
+          <form id="reminder-form" novalidate>
+            <div class="row">
+              <label>Texte <input id="reminder-text" type="text" maxlength="200" placeholder="Ex. Appeler Paul"></label>
+              <label>Date et heure <input id="reminder-at" type="datetime-local"></label>
+            </div>
+            <div class="row buttons">
+              <button class="btn" type="submit">AJOUTER</button>
+              <button id="reminder-notif" class="btn ghost" type="button">ACTIVER LES NOTIFICATIONS</button>
+            </div>
+          </form>
+          <p id="reminder-msg" class="form-msg" role="status"></p>
+          <p class="hint">Les rappels sonnent uniquement tant que cet onglet reste ouvert (pas de service en arrière-plan).</p>
+          <ul id="reminder-list" class="list"></ul>
+        </section>
+
+        <!-- RÉGLAGES -->
+        <section class="view panel" id="view-settings" data-view="settings" hidden>
+          <h2>Réglages</h2>
+          <form id="settings-form" novalidate>
+            <h3>Thème</h3>
+            <label>Couleur de l'interface <select id="set-theme"></select></label>
+            <h3>Intelligence artificielle (optionnelle)</h3>
+            <p class="hint">Compatible avec les API de type « chat/completions » (OpenAI, serveur local Ollama sur http://localhost:11434/v1, etc.). Une fois activée, vos messages de conversation sont envoyés au fournisseur indiqué. Ni l'agenda ni les tâches ne sont transmis. La clé est conservée en clair dans ce navigateur : ne l'utilisez pas sur un poste partagé. Certains fournisseurs bloquent les appels directs depuis un navigateur (CORS).</p>
+            <label class="check-line"><input id="set-ai-enabled" type="checkbox"> Activer l'IA</label>
+            <label>URL de l'API <input id="set-ai-url" type="text" placeholder="https://api.openai.com/v1" autocomplete="off"></label>
+            <div class="row">
+              <label>Modèle <input id="set-ai-model" type="text" placeholder="nom du modèle" autocomplete="off"></label>
+              <label>Clé API <input id="set-ai-key" type="password" placeholder="(vide pour un serveur local)" autocomplete="off"></label>
+            </div>
+            <div class="row buttons">
+              <button id="set-ai-test" class="btn ghost" type="button">TESTER LA CONNEXION</button>
+              <button id="set-ai-forget" class="btn ghost danger" type="button">EFFACER LA CLÉ</button>
+            </div>
+            <p id="set-ai-test-msg" class="form-msg ai-test-msg" role="status" aria-live="polite"></p>
+
+            <h3>Voix</h3>
+            <p class="hint">Sous Chrome et Edge, l'audio dicté est traité par le service en ligne du navigateur. Le micro n'est activé que lorsque vous cliquez sur le bouton central.</p>
+            <label>Langue <select id="set-voice-lang"></select></label>
+            <label class="check-line"><input id="set-voice-auto" type="checkbox"> Envoyer automatiquement la commande dictée</label>
+            <label class="check-line"><input id="set-voice-speak" type="checkbox"> Lire les réponses à voix haute</label>
+
+            <h3>Recherche web</h3>
+            <label>Moteur <select id="set-search-engine"></select></label>
+
+            <div class="row buttons"><button class="btn" type="submit">ENREGISTRER</button></div>
+          </form>
+          <p id="set-msg" class="form-msg" role="status"></p>
+        </section>
+
+        <!-- MESSAGES -->
+        <section class="view panel" id="view-messages" data-view="messages" hidden>
+          <h2>Messages</h2>
+          <form id="mail-form" novalidate>
+            <label>Destinataire <input id="mail-to" type="email" placeholder="nom@exemple.fr" autocomplete="off"></label>
+            <label>Objet <input id="mail-subject" type="text" maxlength="200" placeholder="Objet du message"></label>
+            <label>Message <textarea id="mail-body" rows="7" placeholder="Rédigez votre message…"></textarea></label>
+            <div class="row buttons">
+              <button id="mail-draft" class="btn" type="button">PRÉPARER LE BROUILLON</button>
+              <button id="mail-copy" class="btn ghost" type="button">COPIER</button>
+              <button id="mail-open" class="btn ghost" type="button">OUVRIR MA MESSAGERIE</button>
+              <button id="mail-clear" class="btn ghost" type="button">VIDER</button>
+            </div>
+          </form>
+          <p id="mail-msg" class="form-msg" role="status"></p>
+          <p class="hint">Rien n'est envoyé d'ici : le lien ouvre votre logiciel de messagerie, où vous devez envoyer le message vous-même.</p>
+        </section>
+      </div>
+    </main>
+
+    <!-- ================= COLONNE DROITE ================= -->
+    <aside class="right">
+      <section class="panel">
+        <h2>Système</h2>
+        <dl class="kv">
+          <dt>Session</dt><dd id="sys-session">00:00:00</dd>
+          <dt>Réseau navigateur</dt><dd id="sys-net">—</dd>
+          <dt>Stockage local</dt><dd id="sys-storage">—</dd>
+          <dt>Moteur</dt><dd id="sys-engine">Commandes locales</dd>
+          <dt>Écoute</dt><dd id="sys-listen">Inactive</dd>
+          <dt>IA</dt><dd id="sys-ai">Désactivée</dd>
+          <dt>Rappels actifs</dt><dd id="sys-reminders">0</dd>
+        </dl>
+      </section>
+
+      <section class="panel">
+        <h2>Tâches en attente</h2>
+        <div class="big" id="pending-count">0</div>
+      </section>
+
+      <section class="panel">
+        <h2>Prochains événements</h2>
+        <ul id="next-events" class="list compact"></ul>
+      </section>
+
+      <section class="panel">
+        <h2>Dernière interaction</h2>
+        <p id="last-interaction" class="last">Aucune pour le moment.</p>
+      </section>
+    </aside>
+
+    <!-- ================= BAS : CONVERSATION ================= -->
+    <footer class="dock panel">
+      <div id="chat-log" class="chat-log" aria-live="polite"></div>
+      <div class="suggestions" id="suggestions">
+        <button type="button" data-cmd="Bonjour JARVIS">Bonjour JARVIS</button>
+        <button type="button" data-cmd="Quelle heure est-il ?">Heure</button>
+        <button type="button" data-cmd="Affiche mon agenda">Agenda</button>
+        <button type="button" data-cmd="Quelles sont mes tâches ?">Mes tâches</button>
+        <button type="button" data-fill="Ajoute une tâche : ">Ajouter une tâche…</button>
+        <button type="button" data-fill="Rappelle-moi dans 10 minutes de ">Rappel…</button>
+        <button type="button" data-fill="Rédige un mail à ">Rédiger un mail…</button>
+        <button type="button" data-fill="Recherche sur le web : ">Recherche web…</button>
+        <button type="button" data-fill="Demande à l'IA : ">Demander à l'IA…</button>
+        <button type="button" data-cmd="Ouvre mes messages">Messages</button>
+        <button type="button" data-cmd="Aide">Aide</button>
+      </div>
+      <form id="command-form" class="command-form" autocomplete="off">
+        <span class="prompt" aria-hidden="true">›</span>
+        <input id="command-input" type="text" maxlength="300" placeholder="Saisissez une commande…" aria-label="Commande">
+        <button class="btn" type="submit">ENVOYER</button>
+      </form>
+      <p class="legal">
+        <span id="legal-engine">Moteur conversationnel : commandes locales (IA non activée).</span> Données enregistrées uniquement dans ce navigateur, non synchronisées entre appareils.
+      </p>
+    </footer>
+  </div>
+
+  <!-- Ordre important : chaque fichier utilise ceux qui le précèdent -->
+  <div id="toasts" class="toasts" aria-live="assertive"></div>
+
+  <script src="js/core.js"></script>
+  <script src="js/settings.js"></script>
+  <script src="js/tasks.js"></script>
+  <script src="js/agenda.js"></script>
+  <script src="js/reminders.js"></script>
+  <script src="js/messages.js"></script>
+  <script src="js/voice.js"></script>
+  <script src="js/ai.js"></script>
+  <script src="js/assistant.js"></script>
+  <script src="js/design3d.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
